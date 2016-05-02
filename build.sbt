@@ -13,3 +13,9 @@ libraryDependencies ++= Seq(
   "log4j"         % "log4j"           % "1.2.17",
   "com.amazonaws" % "aws-java-sdk-s3" % "1.9.34"
 )
+
+mappings in (Compile, packageBin) ~= { (ms: Seq[(File, String)]) =>
+  ms filter { case (file, toPath) =>
+    toPath != "com/log4js3/example/Main.class"
+  }
+}
