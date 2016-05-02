@@ -1,6 +1,6 @@
 # log4j-s3 
 
-This is a bit modified (without Solarand published to bintray) fork of [s3-log4j appender](https://github.com/bluedenim/log4j-s3-search). 
+This is a bit modified (without Solar, published to bintray) fork of [s3-log4j appender](https://github.com/bluedenim/log4j-s3-search). 
 See [therealvan.com/s3loggerappender.html](http://www.therealvan.com/s3loggerappender.html) for write-up page.
 
 A [Log4j appender](http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/Appender.html) implementation that will collect log events into a staging buffer up to a configured size to then publish to external store such as:
