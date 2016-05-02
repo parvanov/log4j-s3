@@ -1,12 +1,12 @@
-package org.van.logging.aws;
+package com.log4js3.logging.aws;
 
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 
 import org.apache.http.entity.ContentType;
 import org.apache.log4j.spi.LoggingEvent;
-import org.van.logging.PublishContext;
-import org.van.logging.log4j.IPublishHelper;
+import com.log4js3.logging.PublishContext;
+import com.log4js3.logging.log4j.IPublishHelper;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -26,8 +26,8 @@ import com.amazonaws.services.s3.model.PutObjectResult;
  * runtime environment.</li>
  * <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public class S3PublishHelper implements IPublishHelper {
@@ -91,7 +91,7 @@ public class S3PublishHelper implements IPublishHelper {
 			bucket, key));
 		
 		String data = stringBuilder.toString();
-		//System.out.println(data);		
+		System.out.println(data);
 		try {
 			ObjectMetadata metadata = new ObjectMetadata();
 			byte bytes[] = data.getBytes("UTF-8");
@@ -107,5 +107,4 @@ public class S3PublishHelper implements IPublishHelper {
 		}
 		stringBuilder = null;
 	}
-
 }

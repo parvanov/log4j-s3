@@ -1,4 +1,4 @@
-package org.van.logging.aws;
+package com.log4js3.logging.aws;
 
 import java.lang.reflect.Constructor;
 
@@ -15,8 +15,8 @@ import com.amazonaws.regions.Regions;
  * Builder to build various AWS clients.  In addition to using the default
  * credential providers that the AWS JDK supports, this builder also allows
  * passing in the credentials for applications that prefer to do so.
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public class AwsClientBuilder {

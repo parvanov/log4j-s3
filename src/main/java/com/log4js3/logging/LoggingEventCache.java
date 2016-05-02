@@ -1,4 +1,4 @@
-package org.van.logging;
+package com.log4js3.logging;
 
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -13,8 +13,8 @@ import org.apache.log4j.spi.LoggingEvent;
 /**
  * An event cache that buffers/collects events and publishes them in a 
  * background thread when the buffer fills up.
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public class LoggingEventCache {
@@ -25,7 +25,7 @@ public class LoggingEventCache {
 	/**
 	 * Interface for a publishing collaborator 
 	 * 
-	 * @author vly
+
 	 *
 	 */
 	public interface ICachePublisher {

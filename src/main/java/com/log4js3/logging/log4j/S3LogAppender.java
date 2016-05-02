@@ -1,6 +1,5 @@
-package org.van.logging.log4j;
+package com.log4js3.logging.log4j;
 
-import java.net.URL;
 import java.util.UUID;
 
 import org.apache.log4j.Appender;
@@ -8,12 +7,10 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.spi.OptionHandler;
-import org.van.logging.LoggingEventCache;
-import org.van.logging.aws.AwsClientBuilder;
-import org.van.logging.aws.S3Configuration;
-import org.van.logging.aws.S3PublishHelper;
-import org.van.logging.solr.SolrConfiguration;
-import org.van.logging.solr.SolrPublishHelper;
+import com.log4js3.logging.LoggingEventCache;
+import com.log4js3.logging.aws.AwsClientBuilder;
+import com.log4js3.logging.aws.S3Configuration;
+import com.log4js3.logging.aws.S3PublishHelper;
 
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -54,14 +51,9 @@ import com.amazonaws.services.s3.AmazonS3Client;
  *   <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
  * <br>
- * <h2>Solr</h2>
- * These parameters configure the Solr publisher:
- * <br>
- * <ul>
- *   <li>solrUrl -- the URL to where your Solr core/collection is
- *     (e.g. "http://localhost:8983/solr/mylogs/")</li>
- * </ul>
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
+ * @author Grigory Pomadchin <daunnc@gmail.com>
  *
  */
 public class S3LogAppender extends AppenderSkeleton
@@ -78,7 +70,6 @@ public class S3LogAppender extends AppenderSkeleton
 	private volatile String hostName;
 	
 	private S3Configuration s3;
-	private SolrConfiguration solr;
 	private AmazonS3Client s3Client;	
 	
 	@Override
@@ -117,21 +108,16 @@ public class S3LogAppender extends AppenderSkeleton
 		getS3().setPath(path);
 	}
 	
-	public void setS3AwsKey(String accessKey) {
+	public void setS3AccessKey(String accessKey) {
 		getS3().setAccessKey(accessKey);
 	}
 	
-	public void setS3AwsSecret(String secretKey) {
+	public void setS3SecretKey(String secretKey) {
 		getS3().setSecretKey(secretKey);
 	}
-	
-	// Solr properties
-	///////////////////////////////////////////////////////////////////////////
-	public void setSolrUrl(String url) {
-		if (null == solr) {
-			solr = new SolrConfiguration();
-		}
-		solr.setUrl(url);
+
+	public void setS3Region(String region) {
+		getS3().setRegion(region);
 	}
 	
 	public void setTags(String tags) {
@@ -191,12 +177,6 @@ public class S3LogAppender extends AppenderSkeleton
 			if (null != s3Client) {
 				publisher.addHelper(new S3PublishHelper(s3Client,
 					s3.getBucket(), s3.getPath()));
-			}
-			if (null != solr) {
-			URL solrUrl = solr.getUrl();
-				if (null != solrUrl) {
-					publisher.addHelper(new SolrPublishHelper(solrUrl));
-				}
 			}
 			UUID uuid = UUID.randomUUID();
 			stagingLog = new LoggingEventCache(

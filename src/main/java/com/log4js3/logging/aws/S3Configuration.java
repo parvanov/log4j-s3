@@ -1,15 +1,16 @@
-package org.van.logging.aws;
+package com.log4js3.logging.aws;
 
 import com.amazonaws.regions.Regions;
 
 /**
- * S3 connectivity/configuration 
- * 
- * @author vly
+ * S3 connectivity/configuration
+ *
+ * @author Van Ly <vancly@hotmail.com>
+ * @author Grigory Pomadchin <daunnc@gmail.com>
  *
  */
 public class S3Configuration {
-	public static final String DEFAULT_AWS_REGION = Regions.US_WEST_2.name();
+	public static final String DEFAULT_AWS_REGION = Regions.US_EAST_1.name();
 	public static final String DEFAULT_LOG_BUCKETPATH = "logs/";
 	
 	private String accessKey = null;
@@ -33,9 +34,7 @@ public class S3Configuration {
 	public String getRegion() {
 		return region;
 	}
-	public void setRegion(String region) {
-		this.region = region;
-	}
+	public void setRegion(String region) { this.region = Regions.fromName(region).name(); }
 	public String getBucket() {
 		return bucket;
 	}

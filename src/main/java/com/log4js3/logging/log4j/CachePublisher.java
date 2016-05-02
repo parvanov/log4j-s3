@@ -1,4 +1,4 @@
-package org.van.logging.log4j;
+package com.log4js3.logging.log4j;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -7,14 +7,14 @@ import java.util.List;
 
 import org.apache.log4j.Layout;
 import org.apache.log4j.spi.LoggingEvent;
-import org.van.logging.LoggingEventCache.ICachePublisher;
-import org.van.logging.PublishContext;
+import com.log4js3.logging.LoggingEventCache.ICachePublisher;
+import com.log4js3.logging.PublishContext;
 
 /**
  * Implementation to standardize on a cache name and aggregate and coordinate
  * multiple IPublishHelpers to publish content to different destinations.
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public class CachePublisher implements ICachePublisher {

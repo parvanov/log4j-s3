@@ -1,20 +1,23 @@
-# log4j-s3-search 
+# log4j-s3 
 
-(See [therealvan.com/s3loggerappender.html](http://www.therealvan.com/s3loggerappender.html) for write-up page.)
+This is a bit modified (without Solarand published to bintray) fork of [s3-log4j appender](https://github.com/bluedenim/log4j-s3-search). 
+See [therealvan.com/s3loggerappender.html](http://www.therealvan.com/s3loggerappender.html) for write-up page.
 
 A [Log4j appender](http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/Appender.html) implementation that will collect log events into a staging buffer up to a configured size to then publish to external store such as:
 *  [AWS S3](http://aws.amazon.com/s3/) for remote storage/archive.
-*  [Apache Solr](http://lucene.apache.org/solr/) for search.
 
-All external store above are optional.  If no configuration is found for S3, for instance, the appender will not attempt to publish to S3.  Likewise, if there is not configuration for Apache Solr, the appender will not attempt to publish to Solr.
+All external store above are optional. If no configuration is found for S3, for instance, the appender will not attempt to publish to S3.
 
-## Installation
-Download the code and build the .jar to include in your program.  The code is 100% Java, so building the jar will be a breeze.  You will need the basics:
-* [JSDK 1.6+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
-* [Maven](http://maven.apache.org/)
+## Install
 
-```
-mvn clean package 
+```scala
+libraryDependencies ++= Seq(
+  "com.log4js3" % "log4j-s3" % "0.0.4"
+)
+
+resolvers ++= Seq(
+  resolvers += Resolver.bintrayRepo("daunnc", "maven")
+)
 ```
 
 
@@ -28,7 +31,7 @@ In addition to the typical appender configuration (such as layout, Threshold, et
 
 A sample snippet from `log4j.properties`:
 ```
-log4j.appender.S3Appender=org.van.logging.log4j.S3LogAppender
+log4j.appender.S3Appender=com.log4js3.logging.log4j.S3LogAppender
 log4j.appender.S3Appender.layout=org.apache.log4j.PatternLayout
 log4j.appender.S3Appender.layout.conversionPattern=%d %p [%t] %c %m
 log4j.appender.S3Appender.Threshold=WARN
@@ -52,8 +55,9 @@ A sample snippet from `log4j.properties` (with the optional s3AccessKey and s3Se
 ```
 log4j.appender.S3Appender.s3Bucket=acmecorp
 log4j.appender.S3Appender.s3Path=logs/myApplication/
+log4j.appender.S3Appender.s3Region=us-east-1
 
-# Optional access and secret keys
+## Optional access and secret keys
 log4j.appender.S3Appender.s3AccessKey=CMSADEFHASFHEUCBEOERUE
 log4j.appender.S3Appender.s3SecretKey=ASCNEJAERKE/SDJFHESNCFSKERTFSDFJESF
 ```
@@ -67,33 +71,7 @@ e.g.
 logs/myApplication/20150327081000_localhost_6187f4043f2449ccb4cbd3a7930d1130
 ```
 
+## License
 
-### Solr
-There is only one property for Solr: the REST endpoint to the core/collection:
-* **solrUrl** -- the URL to core/collection
-
-A sample snippet from `log4j.properties`:
-```
-log4j.appender.S3Appender.solrUrl=http://localhost:8983/solr/log-events/
-```
-
-## Solr Integration
-A new core should be created for the log events.  The setting up of Apache Solr and the setting up of a core are outside the scope of this file.  However, a sample template for a `schema.xml` that can be used is included in this repo as `/misc/solr/schema.xml`.
-
-Each log event will be indexed as a Solr document.  The "id" property for each document 
-will follow the format:
-```
-yyyyMMddHH24mmss_{host name}_{UUID w/ "-" stripped}-{sequence}
-
-e.g.
-
-20150327081000_localhost_6187f4043f2449ccb4cbd3a7930d1130-0000000000000012
-```
-
-*NOTE* that this ID is formatted such that one can cross-reference a Solr
-document to the S3 batch from which the corresponding log event can be found.
-
-```
-String id = solrDoc.getFieldValue("id").toString();
-String s3Key = id.substring(0, id.indexOf("-"));
-```
+* Based on repository: https://github.com/bluedenim/log4j-s3-search
+* Licensed under the MIT License: http://opensource.org/licenses/MIT

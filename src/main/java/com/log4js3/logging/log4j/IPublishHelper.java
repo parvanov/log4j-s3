@@ -1,13 +1,13 @@
-package org.van.logging.log4j;
+package com.log4js3.logging.log4j;
 
 import org.apache.log4j.spi.LoggingEvent;
-import org.van.logging.PublishContext;
+import com.log4js3.logging.PublishContext;
 
 /**
  * Interface for publish implementations to actually push log events to
  * external stores.
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public interface IPublishHelper {

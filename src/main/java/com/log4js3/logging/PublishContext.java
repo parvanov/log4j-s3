@@ -1,4 +1,4 @@
-package org.van.logging;
+package com.log4js3.logging;
 
 import org.apache.log4j.Layout;
 
@@ -6,8 +6,8 @@ import org.apache.log4j.Layout;
  * The context for a publish batch.  This object contains various auxiliary
  * information about the environment and configuration that publishers may
  * find useful.
- * 
- * @author vly
+ *
+ * @author Van Ly <vancly@hotmail.com>
  *
  */
 public class PublishContext {
