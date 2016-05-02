@@ -27,7 +27,7 @@ import com.amazonaws.services.s3.model.PutObjectResult;
  * <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class S3PublishHelper implements IPublishHelper {

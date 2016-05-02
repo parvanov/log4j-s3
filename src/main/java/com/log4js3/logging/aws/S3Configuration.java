@@ -5,8 +5,8 @@ import com.amazonaws.regions.Regions;
 /**
  * S3 connectivity/configuration
  *
- * @author Van Ly <vancly@hotmail.com>
- * @author Grigory Pomadchin <daunnc@gmail.com>
+ * @author Van Ly (vancly@hotmail.com)
+ * @author Grigory Pomadchin (daunnc@gmail.com)
  *
  */
 public class S3Configuration {

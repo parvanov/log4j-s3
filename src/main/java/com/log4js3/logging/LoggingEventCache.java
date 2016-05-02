@@ -14,7 +14,7 @@ import org.apache.log4j.spi.LoggingEvent;
  * An event cache that buffers/collects events and publishes them in a 
  * background thread when the buffer fills up.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class LoggingEventCache {

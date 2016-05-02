@@ -52,8 +52,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
  * </ul>
  * <br>
  *
- * @author Van Ly <vancly@hotmail.com>
- * @author Grigory Pomadchin <daunnc@gmail.com>
+ * @author Van Ly (vancly@hotmail.com)
+ * @author Grigory Pomadchin (daunnc@gmail.com)
  *
  */
 public class S3LogAppender extends AppenderSkeleton

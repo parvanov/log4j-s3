@@ -8,7 +8,7 @@ import org.apache.log4j.Logger;
  * Example program to exercise the logger.  Together with the log4j.properties
  * in this project, this program will demonstrate logging batches into S3.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class Main {

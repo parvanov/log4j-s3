@@ -16,7 +16,7 @@ import com.amazonaws.regions.Regions;
  * credential providers that the AWS JDK supports, this builder also allows
  * passing in the credentials for applications that prefer to do so.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class AwsClientBuilder {

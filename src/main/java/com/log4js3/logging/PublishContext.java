@@ -7,7 +7,7 @@ import org.apache.log4j.Layout;
  * information about the environment and configuration that publishers may
  * find useful.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class PublishContext {

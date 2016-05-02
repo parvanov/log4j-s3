@@ -14,7 +14,7 @@ import com.log4js3.logging.PublishContext;
  * Implementation to standardize on a cache name and aggregate and coordinate
  * multiple IPublishHelpers to publish content to different destinations.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class CachePublisher implements ICachePublisher {

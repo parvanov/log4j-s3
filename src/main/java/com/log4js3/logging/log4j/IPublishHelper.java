@@ -7,7 +7,7 @@ import com.log4js3.logging.PublishContext;
  * Interface for publish implementations to actually push log events to
  * external stores.
  *
- * @author Van Ly <vancly@hotmail.com>
+ * @author Van Ly (vancly@hotmail.com)
  *
  */
 public interface IPublishHelper {
