@@ -44,6 +44,7 @@ log4j.appender.S3Appender.stagingBufferSize=2500
 These properties control how the logs will be stored in S3:
 * **s3Bucket** -- the S3 bucket to use.  The logger will attempt to create this bucket if it doesn't already exist.
 * **s3Path** -- the path to the uploaded files (key prefix under the hood)
+* **s3Region** -- the region of the S3 bucket.
 
 AWS credentials are required to interact with S3.  The recommended way is using either 1) instance profiles (when working with EC2 instances) or 2) creating `%USERPROFILE%\.aws\credentials` (Windows) or `~/.aws/credentials`.
 
