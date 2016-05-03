@@ -2,6 +2,9 @@ package com.log4js3.logging.log4j;
 
 import java.util.UUID;
 
+import com.log4js3.logging.hadoop.HadoopConfiguration;
+import com.log4js3.logging.hadoop.HadoopPublishHelper;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.spi.Filter;
@@ -51,7 +54,13 @@ import com.amazonaws.services.s3.AmazonS3Client;
  *   <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
  * <br>
- *
+ *<h2>Solr</h2>
+ * These parameters configure the Solr publisher:
+ * <br>
+ * <ul>
+ *   <li>solrUrl -- the URL to where your Solr core/collection is
+ *     (e.g. "http://localhost:8983/solr/mylogs/")</li>
+ * </ul>
  * @author Van Ly (vancly@hotmail.com)
  * @author Grigory Pomadchin (daunnc@gmail.com)
  *
@@ -70,7 +79,8 @@ public class S3LogAppender extends AppenderSkeleton
 	private volatile String hostName;
 	
 	private S3Configuration s3;
-	private AmazonS3Client s3Client;	
+    private HadoopConfiguration hadoopConfig;
+	private AmazonS3Client s3Client;
 	
 	@Override
 	public void close() {
@@ -129,6 +139,24 @@ public class S3LogAppender extends AppenderSkeleton
 		}		
 	}
 
+    // Hadoop properties
+    ///////////////////////////////////////////////////////////////////////////
+    public HadoopConfiguration getHadoopConfig() {
+        if (null == hadoopConfig) {
+            hadoopConfig = new HadoopConfiguration();
+            hadoopConfig.setConfiguration(new Configuration());
+        }
+        return hadoopConfig;
+    }
+
+    public void setHadoopFS(String fs){
+        hadoopConfig.getConfiguration().set("fs.defaultFS", fs);
+    }
+
+    public void setHadoopPath(String path){
+        hadoopConfig.setPath(path);
+    }
+
 	@Override
 	protected void append(LoggingEvent evt) {
 		try {
@@ -178,6 +206,9 @@ public class S3LogAppender extends AppenderSkeleton
 				publisher.addHelper(new S3PublishHelper(s3Client,
 					s3.getBucket(), s3.getPath()));
 			}
+            if (null != hadoopConfig) {
+                publisher.addHelper(new HadoopPublishHelper(hadoopConfig));
+            }
 			UUID uuid = UUID.randomUUID();
 			stagingLog = new LoggingEventCache(
 				uuid.toString().replaceAll("-",""), stagingBufferSize, 

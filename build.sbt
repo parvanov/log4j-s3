@@ -10,8 +10,9 @@ bintrayOrganization := None
 crossPaths := false
 
 libraryDependencies ++= Seq(
-  "log4j"         % "log4j"           % "1.2.17",
-  "com.amazonaws" % "aws-java-sdk-s3" % "1.9.34"
+  "log4j"             % "log4j"           % "1.2.17",
+  "com.amazonaws"     % "aws-java-sdk-s3" % "1.9.34",
+  "org.apache.hadoop" % "hadoop-client"   % "2.7.1"
 )
 
 mappings in (Compile, packageBin) ~= { (ms: Seq[(File, String)]) =>
