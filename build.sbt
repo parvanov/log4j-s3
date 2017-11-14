@@ -1,5 +1,5 @@
 name := "log4j-s3"
-version := "0.0.4"
+version := "0.0.5"
 organization := "com.log4js3"
 description := "Log4j Appender to transfer to AWS S3"
 licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT"))
