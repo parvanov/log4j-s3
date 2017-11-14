@@ -4,58 +4,59 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.spi.LoggingEvent;
 
 /**
- * An event cache that buffers/collects events and publishes them in a 
+ * An event cache that buffers/collects events and publishes them in a
  * background thread when the buffer fills up.
  *
  * @author Van Ly (vancly@hotmail.com)
  *
  */
 public class LoggingEventCache {
-	
+
 	public static final String PUBLISH_THREAD_NAME =
 		"LoggingEventCache-publish-thread";
-	
+
 	/**
-	 * Interface for a publishing collaborator 
-	 * 
+	 * Interface for a publishing collaborator
+	 *
 
 	 *
 	 */
 	public interface ICachePublisher {
-		
+
 		/**
 		 * Start a batch of events with the given name.  Implementations should
 		 * initialize a publish context and return it.
-		 * 
+		 *
 		 * @param cacheName the name for the batch of events
-		 * 
+		 *
 		 * @return a context for subsequent operations
 		 */
 		PublishContext startPublish(final String cacheName);
-		
+
 		/**
 		 * Publish an event in the batch
-		 * 
+		 *
 		 * @param context the context for this batch
-		 * @param sequence the sequence of this event in the batch.  This 
+		 * @param sequence the sequence of this event in the batch.  This
 		 * number increases per event
 		 * @param event the logging event
 		 */
-		void publish(final PublishContext context, final int sequence, 
+		void publish(final PublishContext context, final int sequence,
 			final LoggingEvent event);
-		
+
 		/**
 		 * Concludes a publish batch.  Implementations should submit/commit
 		 * a batch and/or clean up resources in preparation for the next
 		 * batch.
-		 * 
+		 *
 		 * @param context the context for this batch
 		 */
 		void endPublish(final PublishContext context);
@@ -63,55 +64,71 @@ public class LoggingEventCache {
 
 	private final String cacheName;
 	private final int capacity;
-	
+
 	private final Object EVENTQUEUELOCK = new Object();
 	// Supposedly Log4j already takes care of concurrency for us, so theoretically
 	// we do not need the EVENTQUEUELOCK around {eventQueue, eventQueueLength}
 	// (or the need to use a ConcurrentLinkedQueue as opposed to just a normal
 	// List).  Dunno.  To be safe, I am using them.
-	private Queue<LoggingEvent> eventQueue =			
+	private Queue<LoggingEvent> eventQueue =
 		new ConcurrentLinkedQueue<LoggingEvent>();
 	private volatile int eventQueueLength = 0;
-	
+
 	private final ICachePublisher cachePublisher;
-	private final ExecutorService executorService;
-	
+	private final ScheduledExecutorService executorService;
+
 	/**
 	 * Creates an instance with the provided cache publishing collaborator.
 	 * The instance will create a buffer of the capacity specified and will
 	 * publish a batch when collected events reach that capacity.
-	 * 
+	 *
 	 * @param cacheName name for the cache
 	 * @param capacity the capacity of the buffer for events before the buffer
 	 * is published
+	 * @param autoFlushInterval
 	 * @param cachePublisher the publishing collaborator
 	 */
-	public LoggingEventCache(String cacheName, int capacity, 
-		ICachePublisher cachePublisher) {
+	public LoggingEventCache(String cacheName, int capacity,
+			int autoFlushInterval, ICachePublisher cachePublisher) {
 		this.cacheName = cacheName;
 		this.capacity = capacity;
 		this.cachePublisher = cachePublisher;
-		executorService = createExecutorService(); 
+		executorService = createExecutorService();
+		scheduleAutoFlusher(autoFlushInterval);
 	}
-	
-	ExecutorService createExecutorService() {
-		ExecutorService svc = Executors.newFixedThreadPool(1);
-		return svc;
-	}		
-	
+
+	private void scheduleAutoFlusher(int autoFlushInterval) {
+		if(autoFlushInterval>0)
+			executorService.scheduleAtFixedRate(new Runnable() {
+				@Override
+				public void run() {
+					flushAndPublishQueue(true);
+				}
+			}, autoFlushInterval, autoFlushInterval, TimeUnit.SECONDS);
+	}
+
+	public void close() {
+		flushAndPublishQueue(true);
+		executorService.shutdown();//to cancel the auto-flusher
+	}
+
+	ScheduledExecutorService createExecutorService() {
+		return Executors.newSingleThreadScheduledExecutor();
+	}
+
 	/**
 	 * Retrieves the name of the cache
-	 * 
+	 *
 	 * @return
 	 */
 	public String getCacheName() {
 		return cacheName;
 	}
-	
+
 	/**
 	 * Adds a log event to the cache.  If the number of events reach the
 	 * capacity of the batch, they will be published.
-	 * 
+	 *
 	 * @param event the log event to add to the cache.
 	 */
 	public void add(LoggingEvent event) {
@@ -121,18 +138,18 @@ public class LoggingEventCache {
 				eventQueue.add(event);
 				eventQueueLength++;
 			} else {
-				publish = true; 
+				publish = true;
 			}
 		}
 		if (publish) {
 			flushAndPublishQueue(false);
 		}
 	}
-	
+
 	/**
 	 * Publish the current staging log to remote stores if the staging log
 	 * is not empty.
-	 * 
+	 *
 	 */
 	public void flushAndPublishQueue(boolean block) {
 		Queue<LoggingEvent> queueToPublish = null;
@@ -156,7 +173,7 @@ public class LoggingEventCache {
 			}
 		}
 	}
-	
+
 	Future<Boolean> publishCache(final String name, final Queue<LoggingEvent> eventsToPublish) {
 		Future<Boolean> f = executorService.submit(new Callable<Boolean>() {
 			public Boolean call() {

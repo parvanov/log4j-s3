@@ -21,8 +21,8 @@ import com.amazonaws.services.s3.model.PutObjectResult;
  * <em>NOTES</em>:
  * <ul>
  * <li>If the access key and secret key are provided, they will be preferred over
- * whatever default setting (e.g. ~/.aws/credentials or 
- * %USERPROFILE%\.aws\credentials) is in place for the 
+ * whatever default setting (e.g. ~/.aws/credentials or
+ * %USERPROFILE%\.aws\credentials) is in place for the
  * runtime environment.</li>
  * <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
@@ -33,32 +33,26 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 public class S3PublishHelper implements IPublishHelper {
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String S3ERRCODE_BUCKETALREADYOWNEDBYYOU = "BucketAlreadyOwnedByYou";
-	
+
 	private final AmazonS3Client client;
 	private final String bucket;
 	private final String path;
-	
+
 	private volatile boolean bucketExists = false;
-	private volatile StringBuilder stringBuilder;
-	
+	private volatile StringBuilder stringBuilder = new StringBuilder();
+
 	public S3PublishHelper(AmazonS3Client client, String bucket, String path) {
 		this.client = client;
 		this.bucket = bucket.toLowerCase();
-		if (!path.endsWith("/")) {
-			this.path = path + "/";
-		} else {
-			this.path = path;
-		}
+		this.path = path.endsWith("/") ? path : path + "/";
 	}
-	
+
 	public void publish(PublishContext context, int sequence, LoggingEvent event) {
 		stringBuilder.append(context.getLayout().format(event))
 			.append(LINE_SEPARATOR);
 	}
 
 	public void start(PublishContext context) {
-		stringBuilder = new StringBuilder();
-		
 		// There are two ways to go about this: either I call something like
 		// getBucketLocation()/listBuckets() and check to see if the bucket
 		// is there.  If not, I need to create the bucket.  This requires 2
@@ -67,7 +61,7 @@ public class S3PublishHelper implements IPublishHelper {
 		// I get an exception.  If it's not, then (hopefully) it gets created.
 		// In either case, we only incur 1 hit to S3.
 		// A third option is to just assume the bucket is created a priori.
-		
+
 		// For now, I've chosen the 2nd option.
 		if (!bucketExists) {
 			try {
@@ -85,12 +79,18 @@ public class S3PublishHelper implements IPublishHelper {
 		}
 	}
 
+	private String emptyBuffer() {
+		StringBuilder sb = stringBuilder;
+		stringBuilder = new StringBuilder();
+		return sb.toString();
+	}
+
 	public void end(PublishContext context) {
 		String key = String.format("%s%s", path, context.getCacheName());
 		System.out.println(String.format("Publishing to S3 (bucket=%s; key=%s):",
 			bucket, key));
-		
-		String data = stringBuilder.toString();
+
+		String data = emptyBuffer();
 		System.out.println(data);
 		try {
 			ObjectMetadata metadata = new ObjectMetadata();
@@ -98,13 +98,12 @@ public class S3PublishHelper implements IPublishHelper {
 			metadata.setContentLength(bytes.length);
 			metadata.setContentType(ContentType.TEXT_PLAIN.getMimeType());
 			ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-			PutObjectResult result = client.putObject(bucket, 
+			PutObjectResult result = client.putObject(bucket,
 				key, is, metadata);
 			System.out.println(String.format("Content MD5: %s",
 				result.getContentMd5()));
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
-		stringBuilder = null;
 	}
 }
