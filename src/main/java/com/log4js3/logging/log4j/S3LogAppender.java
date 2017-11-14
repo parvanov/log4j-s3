@@ -51,13 +51,18 @@ import com.amazonaws.services.s3.AmazonS3Client;
  *   <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
  * <br>
- *
+ 	 * <h3>Comment:</h3>
+	 * Ideally S3LogAppender should extend or use some abstract remote logger.<br>
+	 * Hadoop should do the same in its own class. So maven will have 3 jars - log4js3, log4jhadoop, log4jremote.<br>
+	 * Where log4js3 and log4jhadoop depend on log4jremote.<br>
+	 * <br>
+*
  * @author Van Ly (vancly@hotmail.com)
  * @author Grigory Pomadchin (daunnc@gmail.com)
  *
  */
-public class S3LogAppender extends AppenderSkeleton
-	implements Appender, OptionHandler {
+public class S3LogAppender extends AppenderSkeleton implements Appender, OptionHandler {
+	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
 	static final int DEFAULT_THRESHOLD = 2000;
 	static final int MONITOR_PERIOD = 30;
@@ -76,8 +81,9 @@ public class S3LogAppender extends AppenderSkeleton
 	@Override
 	public void close() {
 		System.out.println("close(): Cleaning up resources");
-		if (null != stagingLog) {
-			stagingLog.close();
+		LoggingEventCache log = stagingLog;
+		if (null != log) {
+			log.close();
 			stagingLog = null;
 		}
 	}
@@ -131,11 +137,11 @@ public class S3LogAppender extends AppenderSkeleton
 	}
 
 	@Override
-	protected void append(LoggingEvent evt) {
+	protected void append(LoggingEvent e) {
 		try {
-			stagingLog.add(evt);
+			stagingLog.add(getLayout().format(e) + LINE_SEPARATOR);
 		} catch (Exception ex) {
-			errorHandler.error("Cannot append event", ex, 105, evt);
+			errorHandler.error("Cannot append event", ex, 105, e);
 		}
 	}
 
@@ -174,7 +180,7 @@ public class S3LogAppender extends AppenderSkeleton
 
 	void initStagingLog() throws Exception {
 		if (null == stagingLog) {
-			CachePublisher publisher = new CachePublisher(layout, hostName, tags);
+			CachePublisher publisher = new CachePublisher(hostName, tags);
 			if (null != s3Client) {
 				publisher.addHelper(new S3PublishHelper(s3Client,
 					s3.getBucket(), s3.getPath()));
@@ -185,7 +191,7 @@ public class S3LogAppender extends AppenderSkeleton
 			Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
 					System.out.println("Publishing staging log on shutdown...");
-					stagingLog.flushAndPublishQueue(true);
+					close();
 				}
 			});
 		}

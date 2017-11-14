@@ -1,15 +1,11 @@
 package com.log4js3.logging;
 
-import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.spi.LoggingEvent;
 
 /**
  * An event cache that buffers/collects events and publishes them in a
@@ -19,7 +15,6 @@ import org.apache.log4j.spi.LoggingEvent;
  *
  */
 public class LoggingEventCache {
-
 	public static final String PUBLISH_THREAD_NAME =
 		"LoggingEventCache-publish-thread";
 
@@ -45,12 +40,9 @@ public class LoggingEventCache {
 		 * Publish an event in the batch
 		 *
 		 * @param context the context for this batch
-		 * @param sequence the sequence of this event in the batch.  This
-		 * number increases per event
-		 * @param event the logging event
+		 * @param log the log to publish
 		 */
-		void publish(final PublishContext context, final int sequence,
-			final LoggingEvent event);
+		void publish(final PublishContext context, String log);
 
 		/**
 		 * Concludes a publish batch.  Implementations should submit/commit
@@ -65,13 +57,13 @@ public class LoggingEventCache {
 	private final String cacheName;
 	private final int capacity;
 
-	private final Object EVENTQUEUELOCK = new Object();
+	private final Object lock = new Object();
+
 	// Supposedly Log4j already takes care of concurrency for us, so theoretically
 	// we do not need the EVENTQUEUELOCK around {eventQueue, eventQueueLength}
 	// (or the need to use a ConcurrentLinkedQueue as opposed to just a normal
 	// List).  Dunno.  To be safe, I am using them.
-	private Queue<LoggingEvent> eventQueue =
-		new ConcurrentLinkedQueue<LoggingEvent>();
+	private StringBuffer logBuffer = new StringBuffer();
 	private volatile int eventQueueLength = 0;
 
 	private final ICachePublisher cachePublisher;
@@ -87,6 +79,7 @@ public class LoggingEventCache {
 	 * is published
 	 * @param autoFlushInterval
 	 * @param cachePublisher the publishing collaborator
+	 * @param layout
 	 */
 	public LoggingEventCache(String cacheName, int capacity,
 			int autoFlushInterval, ICachePublisher cachePublisher) {
@@ -129,21 +122,15 @@ public class LoggingEventCache {
 	 * Adds a log event to the cache.  If the number of events reach the
 	 * capacity of the batch, they will be published.
 	 *
-	 * @param event the log event to add to the cache.
+	 * @param log the log to add to the cache.
 	 */
-	public void add(LoggingEvent event) {
-		boolean publish = false;
-		synchronized(EVENTQUEUELOCK) {
-			if (eventQueueLength < capacity) {
-				eventQueue.add(event);
-				eventQueueLength++;
-			} else {
-				publish = true;
-			}
+	public void add(String log) {
+		synchronized(lock) {
+			logBuffer.append(log);
+			eventQueueLength++;
+			if (eventQueueLength < capacity) return;
 		}
-		if (publish) {
-			flushAndPublishQueue(false);
-		}
+		flushAndPublishQueue(false);
 	}
 
 	/**
@@ -152,38 +139,29 @@ public class LoggingEventCache {
 	 *
 	 */
 	public void flushAndPublishQueue(boolean block) {
-		Queue<LoggingEvent> queueToPublish = null;
-		synchronized(EVENTQUEUELOCK) {
-			if (eventQueueLength > 0) {
-				queueToPublish = eventQueue;
-				eventQueue = new ConcurrentLinkedQueue<LoggingEvent>();
-				eventQueueLength = 0;
-			}
+		StringBuffer logsToPublish;
+		synchronized(lock) {
+			if (eventQueueLength <= 0) return;
+			logsToPublish = logBuffer;
+			logBuffer = new StringBuffer();
+			eventQueueLength = 0;
 		}
-		if (null != queueToPublish) {
-			Future<Boolean> f = publishCache(cacheName, queueToPublish);
-			if (block) {
-				try {
-					f.get();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				} catch (ExecutionException e) {
-					e.printStackTrace();
-				}
+		Future<Boolean> f = publishCache(cacheName, logsToPublish.toString());
+		if (block) {
+			try {
+				f.get();
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
 			}
 		}
 	}
 
-	Future<Boolean> publishCache(final String name, final Queue<LoggingEvent> eventsToPublish) {
+	Future<Boolean> publishCache(final String name, final String logsToPublish) {
 		Future<Boolean> f = executorService.submit(new Callable<Boolean>() {
 			public Boolean call() {
 				Thread.currentThread().setName(PUBLISH_THREAD_NAME);
-				int sequence = 0;
 				PublishContext context = cachePublisher.startPublish(cacheName);
-				for (LoggingEvent evt: eventsToPublish) {
-					cachePublisher.publish(context, sequence, evt);
-					sequence++;
-				}
+				cachePublisher.publish(context, logsToPublish);
 				cachePublisher.endPublish(context);
 				return true;
 			}

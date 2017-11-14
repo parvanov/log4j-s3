@@ -4,14 +4,13 @@ import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 
 import org.apache.http.entity.ContentType;
-import org.apache.log4j.spi.LoggingEvent;
-import com.log4js3.logging.PublishContext;
-import com.log4js3.logging.log4j.IPublishHelper;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.log4js3.logging.PublishContext;
+import com.log4js3.logging.log4j.IPublishHelper;
 
 /**
  * Implementation to publish log events to S3.
@@ -31,7 +30,6 @@ import com.amazonaws.services.s3.model.PutObjectResult;
  *
  */
 public class S3PublishHelper implements IPublishHelper {
-	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String S3ERRCODE_BUCKETALREADYOWNEDBYYOU = "BucketAlreadyOwnedByYou";
 
 	private final AmazonS3Client client;
@@ -47,9 +45,8 @@ public class S3PublishHelper implements IPublishHelper {
 		this.path = path.endsWith("/") ? path : path + "/";
 	}
 
-	public void publish(PublishContext context, int sequence, LoggingEvent event) {
-		stringBuilder.append(context.getLayout().format(event))
-			.append(LINE_SEPARATOR);
+	public void publish(PublishContext context, String log) {
+		stringBuilder.append(log);
 	}
 
 	public void start(PublishContext context) {
