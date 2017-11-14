@@ -16,3 +16,6 @@ TAGS
 *.iml
 *.sublime-workspace
 .DS_Store
+/.classpath
+/.project
+/.settings
