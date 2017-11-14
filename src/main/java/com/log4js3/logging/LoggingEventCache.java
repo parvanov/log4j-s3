@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
  * background thread when the buffer fills up.
  *
  * @author Van Ly (vancly@hotmail.com)
+ * @author Plamen Parvanov
  *
  */
 public class LoggingEventCache {
@@ -27,14 +28,18 @@ public class LoggingEventCache {
 	public interface ICachePublisher {
 
 		/**
-		 * Start a batch of events with the given name.  Implementations should
-		 * initialize a publish context and return it.
-		 *
+		 * Create a context for a batch of events. Context may be reused in case logs need to be overwritten.
 		 * @param cacheName the name for the batch of events
-		 *
 		 * @return a context for subsequent operations
 		 */
-		PublishContext startPublish(final String cacheName);
+		PublishContext createContext(final String cacheName);
+
+		/**
+		 * Start a batch of events with the given context.
+		 * @param ctx a context to reuse
+		 */
+		void startPublish(PublishContext ctx);
+
 
 		/**
 		 * Publish an event in the batch
@@ -69,6 +74,8 @@ public class LoggingEventCache {
 	private final ICachePublisher cachePublisher;
 	private final ScheduledExecutorService executorService;
 
+	private volatile PublishContext reuseContext;
+
 	/**
 	 * Creates an instance with the provided cache publishing collaborator.
 	 * The instance will create a buffer of the capacity specified and will
@@ -95,13 +102,13 @@ public class LoggingEventCache {
 			executorService.scheduleAtFixedRate(new Runnable() {
 				@Override
 				public void run() {
-					flushAndPublishQueue(true);
+					flushAndPublishQueue(true, true);
 				}
 			}, autoFlushInterval, autoFlushInterval, TimeUnit.SECONDS);
 	}
 
 	public void close() {
-		flushAndPublishQueue(true);
+		flushAndPublishQueue(true, false);
 		executorService.shutdown();//to cancel the auto-flusher
 	}
 
@@ -130,7 +137,7 @@ public class LoggingEventCache {
 			eventQueueLength++;
 			if (eventQueueLength < capacity) return;
 		}
-		flushAndPublishQueue(false);
+		flushAndPublishQueue(false, false);
 	}
 
 	/**
@@ -138,15 +145,17 @@ public class LoggingEventCache {
 	 * is not empty.
 	 *
 	 */
-	public void flushAndPublishQueue(boolean block) {
-		StringBuffer logsToPublish;
+	public void flushAndPublishQueue(boolean block, boolean keepOpen) {
+		String logsToPublish;
 		synchronized(lock) {
 			if (eventQueueLength <= 0) return;
-			logsToPublish = logBuffer;
-			logBuffer = new StringBuffer();
-			eventQueueLength = 0;
+			logsToPublish = logBuffer.toString();
+			if(!keepOpen) {
+				logBuffer = new StringBuffer();
+				eventQueueLength = 0;
+			}
 		}
-		Future<Boolean> f = publishCache(cacheName, logsToPublish.toString());
+		Future<Boolean> f = publishCache(cacheName, logsToPublish, keepOpen);
 		if (block) {
 			try {
 				f.get();
@@ -156,13 +165,16 @@ public class LoggingEventCache {
 		}
 	}
 
-	Future<Boolean> publishCache(final String name, final String logsToPublish) {
+	Future<Boolean> publishCache(final String name, final String logsToPublish, boolean keepOpen) {
 		Future<Boolean> f = executorService.submit(new Callable<Boolean>() {
 			public Boolean call() {
 				Thread.currentThread().setName(PUBLISH_THREAD_NAME);
-				PublishContext context = cachePublisher.startPublish(cacheName);
-				cachePublisher.publish(context, logsToPublish);
-				cachePublisher.endPublish(context);
+				PublishContext ctx = reuseContext;//republish if last is open
+				if(ctx==null) ctx = cachePublisher.createContext(cacheName);
+				cachePublisher.startPublish(ctx);
+				cachePublisher.publish(ctx, logsToPublish);
+				cachePublisher.endPublish(ctx);
+				reuseContext = keepOpen ? ctx : null;//keep context open for next republish
 				return true;
 			}
 		});

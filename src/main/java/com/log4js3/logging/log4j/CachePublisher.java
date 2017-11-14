@@ -27,15 +27,16 @@ public class CachePublisher implements ICachePublisher {
 		this.tags = tags;
 	}
 
-	public PublishContext startPublish(String cacheName) {
+	public PublishContext createContext(final String cacheName) {
 		String namespacedCacheName = composeNamespacedCacheName(cacheName);
 		System.out.println(String.format("BEGIN publishing to %s...",
 			namespacedCacheName));
-		PublishContext context = new PublishContext(namespacedCacheName, hostName, tags);
-		for (IPublishHelper helper: helpers) {
+		return new PublishContext(namespacedCacheName, hostName, tags);
+	}
+
+	public void startPublish(PublishContext context) {
+		for (IPublishHelper helper: helpers)
 			helper.start(context);
-		}
-		return context;
 	}
 
 	String composeNamespacedCacheName(String rawCacheName) {
