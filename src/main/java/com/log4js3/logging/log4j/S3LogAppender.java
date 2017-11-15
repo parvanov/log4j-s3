@@ -175,12 +175,14 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 	}
 
 	void initStagingLog() throws Exception {
-		if (null == stagingLog) {
-			System.out.println("S3LogAppender path: "+s3.getPath());
+		if (null == stagingLog)
+		try {
 			CachePublisher publisher = new CachePublisher(hostName, tags);
 			if (null != s3Client) {
+				System.out.println("S3LogAppender path: "+s3.getPath());
 				publisher.addHelper(new S3PublishHelper(s3Client, s3.getPath()));
-			}
+			} else
+				System.out.println("S3LogAppender - not configured ");
 			String id = UUID.randomUUID().toString().replace("-","");
 			stagingLog = new LoggingEventCache(id, stagingBufferSize, autoFlushInterval, publisher);
 
@@ -190,6 +192,9 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 					close();
 				}
 			});
+		} catch (Exception e) {
+			System.out.println("Failed to initialize S3LogAppender: "+e);
+			e.printStackTrace();
 		}
 	}
 
