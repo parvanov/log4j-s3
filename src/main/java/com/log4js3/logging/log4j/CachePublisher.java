@@ -18,19 +18,20 @@ import com.log4js3.logging.PublishContext;
 public class CachePublisher implements ICachePublisher {
 	private final String hostName;
 	private final String[] tags;
+	private final boolean gzip;
 
-	private List<IPublishHelper> helpers =
-		new LinkedList<IPublishHelper>();
+	private List<IPublishHelper> helpers = new LinkedList<IPublishHelper>();
 
-	public CachePublisher(String hostName, String[] tags) {
+	public CachePublisher(String hostName, String[] tags, boolean gzip) {
 		this.hostName = hostName;
 		this.tags = tags;
+		this.gzip = gzip;
 	}
 
 	public PublishContext createContext(final String cacheName) {
 		String namespacedCacheName = composeNamespacedCacheName(cacheName);
 //		System.out.println(String.format("BEGIN publishing to %s...", namespacedCacheName));
-		return new PublishContext(namespacedCacheName, hostName, tags);
+		return new PublishContext(namespacedCacheName, hostName, tags, gzip);
 	}
 
 	public void startPublish(PublishContext context) {
@@ -39,9 +40,12 @@ public class CachePublisher implements ICachePublisher {
 	}
 
 	String composeNamespacedCacheName(String rawCacheName) {
-		String dt = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-		String d1 = new SimpleDateFormat("yyyy/MMdd").format(new Date());
-		return String.format("%s/%s_%s_%s", d1, dt, hostName, rawCacheName);
+		Date now = new Date();
+		String dt = new SimpleDateFormat("yyyyMMddHHmmss").format(now);
+		String d1 = new SimpleDateFormat("yyyy/MMdd").format(now);
+		String s = String.format("%s/%s_%s_%s.log", d1, dt, hostName, rawCacheName);
+		if(gzip) s += ".gz";
+		return s;
 	}
 
 	public void publish(PublishContext context, String log) {
@@ -52,7 +56,7 @@ public class CachePublisher implements ICachePublisher {
 	public void endPublish(PublishContext context) {
 		for (IPublishHelper helper: helpers)
 			helper.end(context);
-		System.out.println(String.format("END publishing to %s", context.getCacheName()));
+		System.out.println(String.format("END publishing to %s", context.cacheName));
 	}
 
 	/**

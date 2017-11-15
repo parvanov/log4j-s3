@@ -1,7 +1,9 @@
 package com.log4js3.logging.aws;
 
 import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.http.entity.ContentType;
 
@@ -26,6 +28,7 @@ import com.log4js3.logging.log4j.IPublishHelper;
  * </ul>
  *
  * @author Van Ly (vancly@hotmail.com)
+ * @author Plamen Parvanov
  *
  */
 public class S3PublishHelper implements IPublishHelper {
@@ -83,21 +86,30 @@ public class S3PublishHelper implements IPublishHelper {
 		return sb.toString();
 	}
 
+	byte[] gzip(byte[] data) throws IOException {
+		ByteArrayOutputStream buf = new ByteArrayOutputStream();
+		GZIPOutputStream out = new GZIPOutputStream(buf);
+		out.write(data);
+		out.finish();
+		return buf.toByteArray();
+	}
+
 	public void end(PublishContext context) {
-		String key = String.format("%s%s", path, context.getCacheName());
+		String key = String.format("%s%s", path, context.cacheName);
 		System.out.println(String.format("Publishing to S3 (%s/%s):", bucket, key));
 
 		String data = emptyBuffer();
 		try {
 			ObjectMetadata metadata = new ObjectMetadata();
 			byte bytes[] = data.getBytes("UTF-8");
+			if(context.gzip) {
+				bytes = gzip(bytes);
+				metadata.setContentEncoding("gzip");
+			}
 			metadata.setContentLength(bytes.length);
 			metadata.setContentType(ContentType.TEXT_PLAIN.getMimeType());
-			ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-//			PutObjectResult result =
-			client.putObject(bucket, key, is, metadata);
-//			System.out.println(String.format("Content MD5: %s", result.getContentMd5()));
-		} catch (UnsupportedEncodingException e) {
+			client.putObject(bucket, key, new ByteArrayInputStream(bytes), metadata);
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

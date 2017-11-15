@@ -69,6 +69,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 	private int stagingBufferSize = DEFAULT_THRESHOLD;
 	private int autoFlushInterval;
+	private boolean gzip = true;
 
 	private LoggingEventCache stagingLog = null;
 
@@ -177,7 +178,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 	void initStagingLog() throws Exception {
 		if (null == stagingLog)
 		try {
-			CachePublisher publisher = new CachePublisher(hostName, tags);
+			CachePublisher publisher = new CachePublisher(hostName, tags, gzip);
 			if (null != s3Client) {
 				System.out.println("S3LogAppender path: "+s3.getPath());
 				publisher.addHelper(new S3PublishHelper(s3Client, s3.getPath()));
@@ -199,6 +200,10 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 	public void setAutoFlushInterval(int autoFlushInterval) {
 		this.autoFlushInterval = autoFlushInterval;
+	}
+
+	public void setGzip(boolean gzip) {
+		this.gzip = gzip;
 	}
 
 }

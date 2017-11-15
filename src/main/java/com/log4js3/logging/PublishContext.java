@@ -9,9 +9,10 @@ package com.log4js3.logging;
  *
  */
 public class PublishContext {
-	private final String cacheName;
-	private final String hostName;
-	private final String[] tags;
+	public final String cacheName;
+	public final String hostName;
+	public final String[] tags;
+	public final boolean gzip;
 
 	/**
 	 * Creates an instance with the data provided
@@ -22,22 +23,13 @@ public class PublishContext {
 	 * 	the name of the local host)
 	 * @param tags additional tags for the event that the logger was intialized
 	 * 	with
+	 * @param gzip
 	 */
-	public PublishContext(String cacheName, String hostName, String[] tags) {
+	public PublishContext(String cacheName, String hostName, String[] tags, boolean gzip) {
 		this.cacheName = cacheName;
 		this.hostName = hostName;
 		this.tags = tags;
+		this.gzip = gzip;
 	}
 
-	public String getCacheName() {
-		return cacheName;
-	}
-
-	public String getHostName() {
-		return hostName;
-	}
-
-	public String[] getTags() {
-		return tags;
-	}
 }
