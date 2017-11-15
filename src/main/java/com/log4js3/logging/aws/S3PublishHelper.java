@@ -39,9 +39,11 @@ public class S3PublishHelper implements IPublishHelper {
 	private volatile boolean bucketExists = false;
 	private volatile StringBuilder stringBuilder = new StringBuilder();
 
-	public S3PublishHelper(AmazonS3Client client, String bucket, String path) {
+	public S3PublishHelper(AmazonS3Client client, String path) {
 		this.client = client;
-		this.bucket = bucket.toLowerCase();
+		String[] pp = path.split("/", 2);
+		this.bucket = pp[0].toLowerCase();
+		path = pp[1];
 		this.path = path.endsWith("/") ? path : path + "/";
 	}
 

@@ -11,13 +11,11 @@ import com.amazonaws.regions.Regions;
  */
 public class S3Configuration {
 	public static final String DEFAULT_AWS_REGION = Regions.US_EAST_1.name();
-	public static final String DEFAULT_LOG_BUCKETPATH = "logs/";
 
 	private String accessKey = null;
 	private String secretKey = null;
 	private String region = DEFAULT_AWS_REGION;
-	private String bucket = null;
-	private String path = DEFAULT_LOG_BUCKETPATH;
+	private String path;
 
 	public String getAccessKey() {
 		return accessKey;
@@ -36,12 +34,6 @@ public class S3Configuration {
 	}
 	public void setRegion(String region) {
 		this.region = Regions.fromName(region).name();
-	}
-	public String getBucket() {
-		return bucket;
-	}
-	public void setBucket(String bucket) {
-		this.bucket = bucket;
 	}
 	public String getPath() {
 		return path;

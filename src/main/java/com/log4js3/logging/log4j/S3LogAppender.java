@@ -83,8 +83,8 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 		System.out.println("close(): Cleaning up resources");
 		LoggingEventCache log = stagingLog;
 		if (null != log) {
-			log.close();
 			stagingLog = null;
+			log.close();
 		}
 	}
 
@@ -105,10 +105,6 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 			s3 = new S3Configuration();
 		}
 		return s3;
-	}
-
-	public void setS3Bucket(String bucket) {
-		getS3().setBucket(bucket);
 	}
 
 	public void setS3Path(String path) {
@@ -180,10 +176,10 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 	void initStagingLog() throws Exception {
 		if (null == stagingLog) {
+			System.out.println("S3LogAppender path: "+s3.getPath());
 			CachePublisher publisher = new CachePublisher(hostName, tags);
 			if (null != s3Client) {
-				publisher.addHelper(new S3PublishHelper(s3Client,
-					s3.getBucket(), s3.getPath()));
+				publisher.addHelper(new S3PublishHelper(s3Client, s3.getPath()));
 			}
 			String id = UUID.randomUUID().toString().replace("-","");
 			stagingLog = new LoggingEventCache(id, stagingBufferSize, autoFlushInterval, publisher);
