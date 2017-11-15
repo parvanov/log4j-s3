@@ -25,7 +25,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
  * <br>
  * <ul>
  *   <li>stagingBufferSize -- the buffer size to collect log events before
- *   		publishing them in a batch (e.g. 20000).(</li>
+ *   		publishing them in a batch (e.g. 20000).</li>
+ *   <li>autoFlushInterval -- interval in seconds to flush over to the same file until it fills up, 0 for no auto-flushing</li>
  *   <li>tags -- comma delimited list of additional tags to associate with the
  *   		events (e.g. "MainSite;Production").</li>
  * </ul>
@@ -38,8 +39,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
  *     credentials</li>
  *   <li>s3SecretKey -- (optional) the secret key component of the AWS
  *     credentials</li>
- *   <li>s3Bucket -- the bucket name in S3 to use</li>
- *   <li>s3Path -- the path (key prefix) to use to compose the final key
+ *   <li>s3Path -- full path (bucket/key prefix) to use to compose the final key
  *     to use to store the log events batch</li>
  * </ul>
  * <em>NOTES</em>:
@@ -59,7 +59,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 *
  * @author Van Ly (vancly@hotmail.com)
  * @author Grigory Pomadchin (daunnc@gmail.com)
- *
+ * @author Plamen Parvanov
  */
 public class S3LogAppender extends AppenderSkeleton implements Appender, OptionHandler {
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -80,7 +80,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 	@Override
 	public void close() {
-		System.out.println("close(): Cleaning up resources");
+		System.out.println("S3LogAppender.close(): Cleaning up resources");
 		LoggingEventCache log = stagingLog;
 		if (null != log) {
 			stagingLog = null;
@@ -188,7 +188,6 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 			Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
-					System.out.println("Publishing staging log on shutdown...");
 					close();
 				}
 			});

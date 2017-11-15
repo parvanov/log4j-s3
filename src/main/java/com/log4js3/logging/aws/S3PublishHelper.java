@@ -8,7 +8,6 @@ import org.apache.http.entity.ContentType;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.log4js3.logging.PublishContext;
 import com.log4js3.logging.log4j.IPublishHelper;
 
@@ -86,21 +85,18 @@ public class S3PublishHelper implements IPublishHelper {
 
 	public void end(PublishContext context) {
 		String key = String.format("%s%s", path, context.getCacheName());
-		System.out.println(String.format("Publishing to S3 (bucket=%s; key=%s):",
-			bucket, key));
+		System.out.println(String.format("Publishing to S3 (%s/%s):", bucket, key));
 
 		String data = emptyBuffer();
-		System.out.println(data);
 		try {
 			ObjectMetadata metadata = new ObjectMetadata();
 			byte bytes[] = data.getBytes("UTF-8");
 			metadata.setContentLength(bytes.length);
 			metadata.setContentType(ContentType.TEXT_PLAIN.getMimeType());
 			ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-			PutObjectResult result = client.putObject(bucket,
-				key, is, metadata);
-			System.out.println(String.format("Content MD5: %s",
-				result.getContentMd5()));
+//			PutObjectResult result =
+			client.putObject(bucket, key, is, metadata);
+//			System.out.println(String.format("Content MD5: %s", result.getContentMd5()));
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}

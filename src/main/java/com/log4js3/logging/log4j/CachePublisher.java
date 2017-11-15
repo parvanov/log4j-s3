@@ -29,8 +29,7 @@ public class CachePublisher implements ICachePublisher {
 
 	public PublishContext createContext(final String cacheName) {
 		String namespacedCacheName = composeNamespacedCacheName(cacheName);
-		System.out.println(String.format("BEGIN publishing to %s...",
-			namespacedCacheName));
+//		System.out.println(String.format("BEGIN publishing to %s...", namespacedCacheName));
 		return new PublishContext(namespacedCacheName, hostName, tags);
 	}
 
@@ -40,15 +39,14 @@ public class CachePublisher implements ICachePublisher {
 	}
 
 	String composeNamespacedCacheName(String rawCacheName) {
-		SimpleDateFormat df = new SimpleDateFormat("yyyyMMddHHmmss");
-		return String.format("%s_%s_%s", df.format(new Date()),
-			hostName, rawCacheName);
+		String dt = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+		String d1 = new SimpleDateFormat("yyyy/MMdd").format(new Date());
+		return String.format("%s/%s_%s_%s", d1, dt, hostName, rawCacheName);
 	}
 
 	public void publish(PublishContext context, String log) {
 		for (IPublishHelper helper: helpers)
 			helper.publish(context, log);
-		System.out.println(log);
 	}
 
 	public void endPublish(PublishContext context) {

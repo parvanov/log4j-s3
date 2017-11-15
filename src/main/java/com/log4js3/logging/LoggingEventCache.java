@@ -70,6 +70,7 @@ public class LoggingEventCache {
 	// List).  Dunno.  To be safe, I am using them.
 	private StringBuffer logBuffer = new StringBuffer();
 	private volatile int eventQueueLength = 0;
+	private volatile int flushedPos = 0;
 
 	private final ICachePublisher cachePublisher;
 	private final ScheduledExecutorService executorService;
@@ -102,7 +103,7 @@ public class LoggingEventCache {
 			executorService.scheduleAtFixedRate(new Runnable() {
 				@Override
 				public void run() {
-					flushAndPublishQueue(true, true);
+					flushAndPublishQueue(false, true);//block=false as scheduler is single threaded
 				}
 			}, autoFlushInterval, autoFlushInterval, TimeUnit.SECONDS);
 	}
@@ -110,6 +111,11 @@ public class LoggingEventCache {
 	public void close() {
 		flushAndPublishQueue(true, false);
 		executorService.shutdown();//to cancel the auto-flusher
+		try {
+			executorService.awaitTermination(10, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	ScheduledExecutorService createExecutorService() {
@@ -148,14 +154,15 @@ public class LoggingEventCache {
 	public void flushAndPublishQueue(boolean block, boolean keepOpen) {
 		String logsToPublish;
 		synchronized(lock) {
-			if (eventQueueLength <= 0) return;
+			if (eventQueueLength <= flushedPos) return;
 			logsToPublish = logBuffer.toString();
 			if(!keepOpen) {
 				logBuffer = new StringBuffer();
 				eventQueueLength = 0;
 			}
+			flushedPos = eventQueueLength;
 		}
-		Future<Boolean> f = publishCache(cacheName, logsToPublish, keepOpen);
+		Future<Boolean> f = publishCache(logsToPublish, keepOpen);
 		if (block) {
 			try {
 				f.get();
@@ -165,7 +172,7 @@ public class LoggingEventCache {
 		}
 	}
 
-	Future<Boolean> publishCache(final String name, final String logsToPublish, boolean keepOpen) {
+	Future<Boolean> publishCache(final String logsToPublish, boolean keepOpen) {
 		Future<Boolean> f = executorService.submit(new Callable<Boolean>() {
 			public Boolean call() {
 				Thread.currentThread().setName(PUBLISH_THREAD_NAME);
