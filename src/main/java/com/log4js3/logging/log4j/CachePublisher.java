@@ -41,9 +41,11 @@ public class CachePublisher implements ICachePublisher {
 
 	String composeNamespacedCacheName(String rawCacheName) {
 		Date now = new Date();
-		String dt = new SimpleDateFormat("yyyyMMddHHmmss").format(now);
 		String d1 = new SimpleDateFormat("yyyy/MMdd").format(now);
-		String s = String.format("%s/%s_%s_%s.log", d1, dt, hostName, rawCacheName);
+		String dt = new SimpleDateFormat("yyyyMMdd-HHmmss").format(now);
+		String s = d1+"/"+dt+"_";
+		if(hostName!=null) s += hostName + "_";
+		s += rawCacheName + ".log";
 		if(gzip) s += ".gz";
 		return s;
 	}
