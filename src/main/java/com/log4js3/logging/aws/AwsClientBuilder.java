@@ -23,10 +23,10 @@ public class AwsClientBuilder {
 	private final String accessKey;
 	private final String secretKey;
 	private final Region region;
-	
+
 	/**
 	 * Instantiate a builder with the credentials and region specified (using the {@link Regions} type).
-	 * 
+	 *
 	 * @param regions the region in which to create clients for
 	 * @param accessKey the access key to use for credentials
 	 * @param secretKey the secret key to use for credentials
@@ -47,10 +47,10 @@ public class AwsClientBuilder {
 		this.secretKey = secretKey;
 		this.region = region;
 	}
-	
+
 	/**
 	 * Instantiate a builder using the default AWS credential sources
-	 * 
+	 *
 	 * @param region the region in which to create clients for
 	 */
 	public AwsClientBuilder(Regions region) {
@@ -68,11 +68,12 @@ public class AwsClientBuilder {
 
 	/**
 	 * Build a service client class using the parameters set up for the builder
-	 * 
+	 *
 	 * @param clientClass the class of the service client to build
-	 * 
-	 * @return an instance of the service client 
+	 *
+	 * @return an instance of the service client
 	 */
+	@SuppressWarnings("deprecation")
 	public <T extends AmazonWebServiceClient> T build(Class<T> clientClass) {
 		T client;
 		try {
@@ -84,7 +85,7 @@ public class AwsClientBuilder {
 		}
 		return client;
 	}
-	
+
 	AWSCredentialsProvider getCredentialsProvider() {
 		AWSCredentialsProvider credProvider;
 		if ((null != accessKey) && (null != secretKey)) {
@@ -100,7 +101,7 @@ public class AwsClientBuilder {
 					public void refresh() {
 					}
 				},
-				new DefaultAWSCredentialsProviderChain()					
+				new DefaultAWSCredentialsProviderChain()
 			);
 		} else {
 			credProvider = new DefaultAWSCredentialsProviderChain();
