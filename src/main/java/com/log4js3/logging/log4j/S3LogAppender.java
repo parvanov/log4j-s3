@@ -1,5 +1,6 @@
 package com.log4js3.logging.log4j;
 
+import java.net.InetAddress;
 import java.util.UUID;
 
 import com.log4js3.logging.hadoop.HadoopConfiguration;
@@ -10,13 +11,13 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.spi.OptionHandler;
+
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.log4js3.logging.LoggingEventCache;
 import com.log4js3.logging.aws.AwsClientBuilder;
 import com.log4js3.logging.aws.S3Configuration;
 import com.log4js3.logging.aws.S3PublishHelper;
-
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
 
 /**
  * The log appender adapter that hooks into the Log4j framework to collect
@@ -80,6 +81,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 	private int stagingBufferSize = DEFAULT_THRESHOLD;
 	private int autoFlushInterval;
 	private boolean gzip = true;
+	private boolean reportHostname;
 
 	private LoggingEventCache stagingLog = null;
 
@@ -176,8 +178,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 		super.activateOptions();
 		try {
 			initFilters();
-			java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
-			hostName = addr.getHostName();
+			hostName = reportHostname ? InetAddress.getLocalHost().getHostName() : null;
 			if (null != s3) {
 				AwsClientBuilder builder =
 					new AwsClientBuilder(Regions.valueOf(s3.getRegion()),
@@ -204,6 +205,12 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 		}});
 	}
 
+	public static String generateUUIDBase36() {
+		UUID u = UUID.randomUUID();
+		return	Long.toUnsignedString(u.getMostSignificantBits(), 36) +
+				Long.toUnsignedString(u.getLeastSignificantBits(), 36);
+	}
+
 	void initStagingLog() throws Exception {
 		if (null == stagingLog)
 		try {
@@ -216,7 +223,7 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
             if (null != hadoopConfig) {
                 publisher.addHelper(new HadoopPublishHelper(hadoopConfig));
             }
-			String id = UUID.randomUUID().toString().replace("-","");
+			String id = generateUUIDBase36();
 			stagingLog = new LoggingEventCache(id, stagingBufferSize, autoFlushInterval, publisher);
 
 			Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -236,6 +243,10 @@ public class S3LogAppender extends AppenderSkeleton implements Appender, OptionH
 
 	public void setGzip(boolean gzip) {
 		this.gzip = gzip;
+	}
+
+	public void setReportHostname(boolean reportHostname) {
+		this.reportHostname = reportHostname;
 	}
 
 }
