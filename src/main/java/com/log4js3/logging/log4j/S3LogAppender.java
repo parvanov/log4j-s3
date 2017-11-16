@@ -27,8 +27,9 @@ import com.amazonaws.services.s3.AmazonS3Client;
  * supports (some are required) these parameters:
  * <br>
  * <ul>
- *   <li>stagingBufferSize -- the buffer size to collect log events before 
- *   		publishing them in a batch (e.g. 20000).(</li>
+ *   <li>stagingBufferSize -- the buffer size to collect log events before
+ *   		publishing them in a batch (e.g. 20000).</li>
+ *   <li>autoFlushInterval -- interval in seconds to flush over to the same file until it fills up, 0 for no auto-flushing</li>
  *   <li>tags -- comma delimited list of additional tags to associate with the
  *   		events (e.g. "MainSite;Production").</li>
  * </ul>
@@ -37,19 +38,18 @@ import com.amazonaws.services.s3.AmazonS3Client;
  * These parameters configure the S3 publisher:
  * <br>
  * <ul>
- * 	 <li>s3AccessKey -- (optional) the access key component of the AWS 
+ * 	 <li>s3AccessKey -- (optional) the access key component of the AWS
  *     credentials</li>
  *   <li>s3SecretKey -- (optional) the secret key component of the AWS
  *     credentials</li>
- *   <li>s3Bucket -- the bucket name in S3 to use</li>
- *   <li>s3Path -- the path (key prefix) to use to compose the final key
+ *   <li>s3Path -- full path (bucket/key prefix) to use to compose the final key
  *     to use to store the log events batch</li>
  * </ul>
  * <em>NOTES</em>:
  * <ul>
- *   <li>If the access key and secret key are provided, they will be preferred 
- *   	over whatever default setting (e.g. ~/.aws/credentials or 
- * 		%USERPROFILE%\.aws\credentials) is in place for the 
+ *   <li>If the access key and secret key are provided, they will be preferred
+ *   	over whatever default setting (e.g. ~/.aws/credentials or
+ * 		%USERPROFILE%\.aws\credentials) is in place for the
  * 		runtime environment.</li>
  *   <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
@@ -61,33 +61,42 @@ import com.amazonaws.services.s3.AmazonS3Client;
  *   <li>solrUrl -- the URL to where your Solr core/collection is
  *     (e.g. "http://localhost:8983/solr/mylogs/")</li>
  * </ul>
+ * <h3>Comment:</h3>
+ * Ideally S3LogAppender should extend or use some abstract remote logger.<br>
+ * Hadoop should do the same in its own class. So maven will have 3 jars - log4js3, log4jhadoop, log4jremote.<br>
+ * Where log4js3 and log4jhadoop depend on log4jremote.<br>
+ * <br>
+*
  * @author Van Ly (vancly@hotmail.com)
  * @author Grigory Pomadchin (daunnc@gmail.com)
- *
+ * @author Plamen Parvanov
  */
-public class S3LogAppender extends AppenderSkeleton
-	implements Appender, OptionHandler {
-	
+public class S3LogAppender extends AppenderSkeleton implements Appender, OptionHandler {
+	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
+
 	static final int DEFAULT_THRESHOLD = 2000;
 	static final int MONITOR_PERIOD = 30;
 
-	private int stagingBufferSize = DEFAULT_THRESHOLD;	
-	
+	private int stagingBufferSize = DEFAULT_THRESHOLD;
+	private int autoFlushInterval;
+	private boolean gzip = true;
+
 	private LoggingEventCache stagingLog = null;
-	
+
 	private volatile String[] tags;
 	private volatile String hostName;
-	
+
 	private S3Configuration s3;
     private HadoopConfiguration hadoopConfig;
 	private AmazonS3Client s3Client;
-	
+
 	@Override
 	public void close() {
-		System.out.println("close(): Cleaning up resources");
-		if (null != stagingLog) {
-			stagingLog.flushAndPublishQueue(true);
+		System.out.println("S3LogAppender.close(): Cleaning up resources");
+		LoggingEventCache log = stagingLog;
+		if (null != log) {
 			stagingLog = null;
+			log.close();
 		}
 	}
 
@@ -98,30 +107,26 @@ public class S3LogAppender extends AppenderSkeleton
 
 	public void setStagingBufferSize(int buffer) {
 		stagingBufferSize = buffer;
-	}	
-	
-	
+	}
+
+
 	// S3 properties
-	///////////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////////
 	public S3Configuration getS3() {
 		if (null == s3) {
 			s3 = new S3Configuration();
 		}
 		return s3;
 	}
-	
-	public void setS3Bucket(String bucket) {
-		getS3().setBucket(bucket);
-	}
-	
+
 	public void setS3Path(String path) {
 		getS3().setPath(path);
 	}
-	
+
 	public void setS3AccessKey(String accessKey) {
 		getS3().setAccessKey(accessKey);
 	}
-	
+
 	public void setS3SecretKey(String secretKey) {
 		getS3().setSecretKey(secretKey);
 	}
@@ -129,14 +134,14 @@ public class S3LogAppender extends AppenderSkeleton
 	public void setS3Region(String region) {
 		getS3().setRegion(region);
 	}
-	
+
 	public void setTags(String tags) {
 		if (null != tags) {
 			this.tags = tags.split("[,;]");
 			for (int i = 0; i < this.tags.length; i++) {
 				this.tags[i] = this.tags[i].trim();
 			}
-		}		
+		}
 	}
 
     // Hadoop properties
@@ -158,14 +163,14 @@ public class S3LogAppender extends AppenderSkeleton
     }
 
 	@Override
-	protected void append(LoggingEvent evt) {
+	protected void append(LoggingEvent e) {
 		try {
-			stagingLog.add(evt);
-		} catch (Exception ex) {	
-			errorHandler.error("Cannot append event", ex, 105, evt);
-		}		
+			stagingLog.add(getLayout().format(e) + LINE_SEPARATOR);
+		} catch (Exception ex) {
+			errorHandler.error("Cannot append event", ex, 105, e);
+		}
 	}
-	
+
 	@Override
 	public void activateOptions() {
 		super.activateOptions();
@@ -174,7 +179,7 @@ public class S3LogAppender extends AppenderSkeleton
 			java.net.InetAddress addr = java.net.InetAddress.getLocalHost();
 			hostName = addr.getHostName();
 			if (null != s3) {
-				AwsClientBuilder builder = 
+				AwsClientBuilder builder =
 					new AwsClientBuilder(Regions.valueOf(s3.getRegion()),
 						s3.getAccessKey(), s3.getSecretKey());
 				s3Client = builder.build(AmazonS3Client.class);
@@ -183,7 +188,7 @@ public class S3LogAppender extends AppenderSkeleton
 		} catch (Exception ex) {
 			errorHandler.error("Cannot initialize resources", ex, 100);
 		}
-	}	
+	}
 
 	void initFilters() {
 		addFilter(new Filter() {
@@ -198,29 +203,39 @@ public class S3LogAppender extends AppenderSkeleton
 				return decision;
 		}});
 	}
-	
+
 	void initStagingLog() throws Exception {
-		if (null == stagingLog) {
-			CachePublisher publisher = new CachePublisher(layout, hostName, tags);
+		if (null == stagingLog)
+		try {
+			CachePublisher publisher = new CachePublisher(hostName, tags, gzip);
 			if (null != s3Client) {
-				publisher.addHelper(new S3PublishHelper(s3Client,
-					s3.getBucket(), s3.getPath()));
-			}
+				System.out.println("S3LogAppender path: "+s3.getPath());
+				publisher.addHelper(new S3PublishHelper(s3Client, s3.getPath()));
+			} else
+				System.out.println("S3LogAppender - not configured ");
             if (null != hadoopConfig) {
                 publisher.addHelper(new HadoopPublishHelper(hadoopConfig));
             }
-			UUID uuid = UUID.randomUUID();
-			stagingLog = new LoggingEventCache(
-				uuid.toString().replaceAll("-",""), stagingBufferSize, 
-				publisher);
-			
+			String id = UUID.randomUUID().toString().replace("-","");
+			stagingLog = new LoggingEventCache(id, stagingBufferSize, autoFlushInterval, publisher);
+
 			Runtime.getRuntime().addShutdownHook(new Thread() {
 				public void run() {
-					System.out.println("Publishing staging log on shutdown...");
-					stagingLog.flushAndPublishQueue(true);
+					close();
 				}
 			});
+		} catch (Exception e) {
+			System.out.println("Failed to initialize S3LogAppender: "+e);
+			e.printStackTrace();
 		}
 	}
-	
+
+	public void setAutoFlushInterval(int autoFlushInterval) {
+		this.autoFlushInterval = autoFlushInterval;
+	}
+
+	public void setGzip(boolean gzip) {
+		this.gzip = gzip;
+	}
+
 }

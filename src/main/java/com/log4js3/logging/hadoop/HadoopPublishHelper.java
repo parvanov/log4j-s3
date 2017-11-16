@@ -1,17 +1,14 @@
 package com.log4js3.logging.hadoop;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.spi.LoggingEvent;
-import com.log4js3.logging.PublishContext;
-import com.log4js3.logging.log4j.IPublishHelper;
 
-import static java.lang.Character.LINE_SEPARATOR;
+import com.log4js3.logging.PublishContext;
+import com.log4js3.logging.Util;
+import com.log4js3.logging.log4j.IPublishHelper;
 
 
 /**
@@ -30,9 +27,8 @@ public class HadoopPublishHelper implements IPublishHelper {
         this.hadoopConfiguration = hadoopConfiguration;
     }
 
-    public void publish(PublishContext context, int sequence, LoggingEvent event) {
-        stringBuilder.append(context.getLayout().format(event))
-                .append(LINE_SEPARATOR);
+    public void publish(PublishContext context, String log) {
+        stringBuilder.append(log);
     }
 
     public void start(PublishContext context) {
@@ -48,23 +44,20 @@ public class HadoopPublishHelper implements IPublishHelper {
     }
 
     public void end(PublishContext context) {
-        String file = String.format("%s%s", hadoopConfiguration.getPath(), context.getCacheName());
+        String file = String.format("%s%s", hadoopConfiguration.getPath(), context.cacheName);
         System.out.println(String.format("Publishing to Hadoop (file=%s):", file));
 
         String data = stringBuilder.toString();
         System.out.println(data);
         try {
             byte bytes[] = data.getBytes("UTF-8");
-            try {
-                FileSystem fs = FileSystem.get(hadoopConfiguration.getConfiguration());
-                FSDataOutputStream os = fs.create(new Path(hadoopConfiguration.getPath() + file));
-                os.write(bytes);
-                os.close();
-                fs.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } catch (UnsupportedEncodingException e) {
+            if(context.gzip) bytes = Util.gzip(bytes);
+            FileSystem fs = FileSystem.get(hadoopConfiguration.getConfiguration());
+            FSDataOutputStream os = fs.create(new Path(hadoopConfiguration.getPath() + file));
+            os.write(bytes);
+            os.close();
+            fs.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         stringBuilder = null;

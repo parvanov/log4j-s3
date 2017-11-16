@@ -1,17 +1,16 @@
 package com.log4js3.logging.aws;
 
 import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 
 import org.apache.http.entity.ContentType;
-import org.apache.log4j.spi.LoggingEvent;
-import com.log4js3.logging.PublishContext;
-import com.log4js3.logging.log4j.IPublishHelper;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.log4js3.logging.PublishContext;
+import com.log4js3.logging.Util;
+import com.log4js3.logging.log4j.IPublishHelper;
 
 /**
  * Implementation to publish log events to S3.
@@ -21,44 +20,39 @@ import com.amazonaws.services.s3.model.PutObjectResult;
  * <em>NOTES</em>:
  * <ul>
  * <li>If the access key and secret key are provided, they will be preferred over
- * whatever default setting (e.g. ~/.aws/credentials or 
- * %USERPROFILE%\.aws\credentials) is in place for the 
+ * whatever default setting (e.g. ~/.aws/credentials or
+ * %USERPROFILE%\.aws\credentials) is in place for the
  * runtime environment.</li>
  * <li>Tags are currently ignored by the S3 publisher.</li>
  * </ul>
  *
  * @author Van Ly (vancly@hotmail.com)
+ * @author Plamen Parvanov
  *
  */
 public class S3PublishHelper implements IPublishHelper {
-	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	private static final String S3ERRCODE_BUCKETALREADYOWNEDBYYOU = "BucketAlreadyOwnedByYou";
-	
+
 	private final AmazonS3Client client;
 	private final String bucket;
 	private final String path;
-	
+
 	private volatile boolean bucketExists = false;
-	private volatile StringBuilder stringBuilder;
-	
-	public S3PublishHelper(AmazonS3Client client, String bucket, String path) {
+	private volatile StringBuilder stringBuilder = new StringBuilder();
+
+	public S3PublishHelper(AmazonS3Client client, String path) {
 		this.client = client;
-		this.bucket = bucket.toLowerCase();
-		if (!path.endsWith("/")) {
-			this.path = path + "/";
-		} else {
-			this.path = path;
-		}
+		String[] pp = path.split("/", 2);
+		this.bucket = pp[0].toLowerCase();
+		path = pp[1];
+		this.path = path.endsWith("/") ? path : path + "/";
 	}
-	
-	public void publish(PublishContext context, int sequence, LoggingEvent event) {
-		stringBuilder.append(context.getLayout().format(event))
-			.append(LINE_SEPARATOR);
+
+	public void publish(PublishContext context, String log) {
+		stringBuilder.append(log);
 	}
 
 	public void start(PublishContext context) {
-		stringBuilder = new StringBuilder();
-		
 		// There are two ways to go about this: either I call something like
 		// getBucketLocation()/listBuckets() and check to see if the bucket
 		// is there.  If not, I need to create the bucket.  This requires 2
@@ -67,7 +61,7 @@ public class S3PublishHelper implements IPublishHelper {
 		// I get an exception.  If it's not, then (hopefully) it gets created.
 		// In either case, we only incur 1 hit to S3.
 		// A third option is to just assume the bucket is created a priori.
-		
+
 		// For now, I've chosen the 2nd option.
 		if (!bucketExists) {
 			try {
@@ -85,26 +79,29 @@ public class S3PublishHelper implements IPublishHelper {
 		}
 	}
 
+	private String emptyBuffer() {
+		StringBuilder sb = stringBuilder;
+		stringBuilder = new StringBuilder();
+		return sb.toString();
+	}
+
 	public void end(PublishContext context) {
-		String key = String.format("%s%s", path, context.getCacheName());
-		System.out.println(String.format("Publishing to S3 (bucket=%s; key=%s):",
-			bucket, key));
-		
-		String data = stringBuilder.toString();
-		System.out.println(data);
+		String key = String.format("%s%s", path, context.cacheName);
+		System.out.println(String.format("Publishing to S3 (%s/%s):", bucket, key));
+
+		String data = emptyBuffer();
 		try {
 			ObjectMetadata metadata = new ObjectMetadata();
 			byte bytes[] = data.getBytes("UTF-8");
+			if(context.gzip) {
+				bytes = Util.gzip(bytes);
+				metadata.setContentEncoding("gzip");
+			}
 			metadata.setContentLength(bytes.length);
 			metadata.setContentType(ContentType.TEXT_PLAIN.getMimeType());
-			ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-			PutObjectResult result = client.putObject(bucket, 
-				key, is, metadata);
-			System.out.println(String.format("Content MD5: %s",
-				result.getContentMd5()));
-		} catch (UnsupportedEncodingException e) {
+			client.putObject(bucket, key, new ByteArrayInputStream(bytes), metadata);
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		stringBuilder = null;
 	}
 }
