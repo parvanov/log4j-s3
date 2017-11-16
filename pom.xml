@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.log4js3</groupId>
   <artifactId>log4j-s3</artifactId>
-  <version>0.0.5</version>
+  <version>0.1.1</version>
   <build>
     <plugins>
       <plugin>
