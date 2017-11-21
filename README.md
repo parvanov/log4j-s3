@@ -8,6 +8,10 @@ A [Log4j appender](http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/
 
 All external store above are optional. If no configuration is found for S3, for instance, the appender will not attempt to publish to S3.
 
+Update 0.1.1
+- allows for periodic flushes to S3. It will keep overwriting the current file until it fills up. The periodic flushing is configurable and optinal.
+- optional gzip of log files
+
 ## Install
 
 ```scala
@@ -25,9 +29,12 @@ resolvers ++= Seq(
 ### General
 In addition to the typical appender configuration (such as layout, Threshold, etc.), these common properties control the appender in general:
 *  **stagingBufferSize** -- the number of entries to collect for a batch before publishing (default is 2000).
+*  **autoFlushInterval** -- the interval in seconds to periodically flush. It will keep publishing over the same file until it fills up. Specify 0 to disable.
+*  **gzip** -- gzip the output file. File will have .gz ending. (true/false)
 *  **tags** -- comma-separated tokens to associate to the log entries (used mainly for search filtering). Examples:
     *  `production,webserver`
     *  `qa,database`
+*  **reportHostname** -- whether the hostname should be included in the log filename or not. (true/false)
 
 A sample snippet from `log4j.properties`:
 ```
@@ -38,12 +45,14 @@ log4j.appender.S3Appender.Threshold=WARN
 
 log4j.appender.S3Appender.tags=TEST,ONE,TWO
 log4j.appender.S3Appender.stagingBufferSize=2500
+log4j.appender.S3Appender.autoFlushInterval=30
+log4j.appender.S3Appender.gzip=true
+log4j.appender.S3Appender.reportHostname=false
 ```
 
 ### S3
 These properties control how the logs will be stored in S3:
-* **s3Bucket** -- the S3 bucket to use.  The logger will attempt to create this bucket if it doesn't already exist.
-* **s3Path** -- the path to the uploaded files (key prefix under the hood)
+* **s3Path** -- the path to the uploaded files (S3 bkucket / key prefix under the hood)
 * **s3Region** -- the region of the S3 bucket.
 
 AWS credentials are required to interact with S3.  The recommended way is using either 1) instance profiles (when working with EC2 instances) or 2) creating `%USERPROFILE%\.aws\credentials` (Windows) or `~/.aws/credentials`.
@@ -54,8 +63,7 @@ When these properties are present in the configuration, they *take precedence ov
 
 A sample snippet from `log4j.properties` (with the optional s3AccessKey and s3SecretKey properties set):
 ```
-log4j.appender.S3Appender.s3Bucket=acmecorp
-log4j.appender.S3Appender.s3Path=logs/myApplication/
+log4j.appender.S3Appender.s3Path=acmecorp/logs/myApplication/
 log4j.appender.S3Appender.s3Region=us-east-1
 
 ## Optional access and secret keys
