@@ -119,7 +119,7 @@ public class LoggingEventCache {
 	}
 
 	ScheduledExecutorService createExecutorService() {
-		return Executors.newSingleThreadScheduledExecutor();
+		return Executors.newSingleThreadScheduledExecutor(new DeamonThreadFactory());
 	}
 
 	/**
