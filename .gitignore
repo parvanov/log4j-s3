@@ -19,3 +19,6 @@ TAGS
 /.classpath
 /.project
 /.settings
+/bin/
+/build/
+/.gradle/**
